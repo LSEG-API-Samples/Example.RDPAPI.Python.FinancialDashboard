@@ -10,6 +10,7 @@ import dash_table as dte
 import configparser as cp
 import refinitiv.dataplatform as rdp
 import json
+from functools import reduce
 
 
 # define data to be displayed
@@ -23,7 +24,7 @@ fiColumns = ['Instrument', 'Net sales', 'Gross Profit Margin - %', 'Operating Ma
 app = dash.Dash('EDP Dashboard')
 app.layout = html.Div([
 	
-	html.H4('Sample Test Financial App'),
+	html.H4('Sample Dash/Financial App'),
 	
 	dcc.Dropdown(id='my-dropdown',
 		options = [{'label': i, 'value': i} for i in dow30List],
@@ -34,7 +35,9 @@ app.layout = html.Div([
 	
 	html.Div([
 		html.Div([
-			dcc.Graph(id='my-graph'),
+			dcc.Graph(id='my-graph', figure={ 'data': [],
+				'layout': {'margin': {'l': 40, 'r': 0, 't': 20, 'b': 30}, 'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)'}
+				}),
 			dcc.RangeSlider(
 				id = 'year-slider',
 				min = min(chartRange),
@@ -43,29 +46,26 @@ app.layout = html.Div([
 				marks = {str(year): str(year) for year in chartRange},
 				step = None
 			)
-		], className="eight columns", style={'padding-bottom': 10}),
+		], className="eight columns", style={'paddingBottom': 10}),
 
 		html.Div([
 			html.H4('Streaming Prices'),
 			html.Div(id='nop'),
 			dte.DataTable(id='rtData',
 				columns=[{"name": 'a', "id": 'a'}, {"name": 'b', "id": 'b'}, {"name": 'c', "id": 'c'}, {"name": 'd', "id": 'd'}], 
-				style_cell={'textAlign': 'left', 'border': 'None'}, 
+				style_cell={'textAlign': 'left', 'border': 'None', 'backgroundColor': '#1a1c23'}, 
 				style_header={ 'display': 'None' },
 				style_data_conditional=[{
-					'if': {'column_id': 'a'},
-					'fontWeight': 'bold'
-				}, {
-					'if': {'column_id': 'c'},
-					'fontWeight': 'bold'
-				}]
+					'if': {'column_id': bold},
+						'fontWeight': 'bold'
+				} for bold in ['a', 'c']]
 			),
 			dcc.Interval(id='interval', interval=1000),
 
 			html.H4('Financial Ratios'),
 			dte.DataTable(id='finRatios',
 				columns=[{"name": 'a', "id": 'a'}, {"name": 'b', "id": 'b'}], 
-				style_cell={'textAlign': 'left', 'border': 'None'}, 
+				style_cell={'textAlign': 'left', 'border': 'None', 'backgroundColor': '#1a1c23'}, 
 				style_header={ 'display': 'None' },
 				style_data_conditional=[{
 					'if': {'column_id': 'a'},
@@ -79,7 +79,7 @@ app.layout = html.Div([
 	html.H4('Latest Headlines'),
 	dte.DataTable(columns=newsColumns, 
 		id='news', 
-		style_cell={'textAlign': 'left'}, 
+		style_cell={'textAlign': 'left', 'border': '1px solid #404040', 'backgroundColor': '#1a1c23'}, 
 		style_as_list_view=True,
 		style_header={'fontWeight': 'bold'},
 	)
@@ -107,13 +107,17 @@ def update_view(selected_dropdown_value, selected_years):
 	response = tsEndpoint.send_request(path_parameters = {'instrument': selected_dropdown_value}, query_parameters = {'interval': 'P1D', 'fields': 'TRDPRC_1', 'start': str(selected_years[0]) + '-01-01', 'end': str(selected_years[1]) + '-12-31'})
 	if response.is_success:
 		ts = response.json()
-		ts_result = {
-			'data': [{
-				'x': [x for x, y in ts[0]['data']],
-				'y': [y for x, y in ts[0]['data']]
-			}],
-			'layout': {'margin': {'l': 40, 'r': 0, 't': 20, 'b': 30}}
-		}
+		datesM = [x for x, y in ts[0]['data']]
+		xM = [y for x, y in ts[0]['data']]
+		N = 10 * (selected_years[1] - selected_years[0] + 1)
+		sma = [None for i in range(N - 1)]
+			
+		for i in range(0, len(xM) - N - 1, 1):
+			y = xM[i: i + N]
+			dPt = reduce(lambda x, y__: x + y__, y) / len(y)
+			sma.append(dPt)
+	
+		ts_result = {'data': [{'x': datesM, 'y': xM, 'name': 'Close'}, {'x': datesM, 'y': sma, 'name': 'SMA'}], 'layout': {'margin': {'l': 40, 'r': 0, 't': 20, 'b': 30}, 'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)'}}
 	else:
 		ts_result = {'data': []}
 	
@@ -128,9 +132,7 @@ def startStreaming(selected_dropdown_value):
 	strm = pricing.open_stream(
 		universe = selected_dropdown_value, 
 		fields = ['DSPLY_NAME', 'TRDPRC_1', 'NETCHNG_1', 'HIGH_1', 'LOW_1', 'OPEN_PRC', 'HST_CLOSE', 'BID', 'ASK', 'ACVOL_1', 'EARNINGS', 'YIELD', 'PERATIO'],
-		#on_update = lambda obj, update : print('.', end = '')
 	)
-	
 
 
 @app.callback(Output('rtData', 'data'), [Input('interval', 'n_intervals')])
@@ -161,6 +163,4 @@ tsEndpoint = rdp.Endpoint(rrSession, "data/historical-pricing/v1/views/interday-
 pricing = rdp.Pricing(rrSession)
 
 # run the dash app
-app.css.append_css({'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'})
-app.css.config.serve_locally = False
 app.run_server(debug=True)
