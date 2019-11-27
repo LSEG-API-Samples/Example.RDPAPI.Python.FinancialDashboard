@@ -16,7 +16,7 @@ Start the Dash application: ```python edpapp_Content.py```
 
 Navigate the browser to URL: ```http://127.0.0.1:8050/```
    
-Select the symbol from the dropdown list to view metrics for that stock. 
+Select the symbol from the dropdown list to view metrics for that stock. Clicking on News headline will pop open the News story.
    
 ### Screenshot
 
