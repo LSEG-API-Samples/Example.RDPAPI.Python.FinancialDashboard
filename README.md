@@ -1,12 +1,23 @@
-# Example.RDPAPI.Python.FinancialDashboard
-Financial Dashboard using RDP library
+# FinancialDashboard
+This is a quick example use case of building a financial dashboard type application using Plotly/Dash Framework using the RDP Library for Python. The example shows a price graph for an equity along with real-time streaming data, ESG Score and latest News headlines and stories for an equity instrument.
 
-Install Dash Framework for Python
+### Prerequisites
+* Install Dash framework for Python
+* Install RDP library for Python - current supported version: **refinitiv_dataplatform-0.2.35**
+* Credentials to retrieve snapshot and streaming data from Elektron Data Platform.
+   * Machine ID
+   * Password
+   * App Key aka Client ID
+   * Permissioned for Historical Timeseries API, ESG API, News API and ERT in Cloud streaming data.
 
-Install latest RDP library for Python
+### Run
 
-You will need userID, password and an AppKey for Elektron Data Platform, which is permissioned for ERT in Cloud data, Historical Timeseries API, Fundamental data API and News API.
+Start the Dash application: ```python edpapp_Content.py```
 
+Navigate the browser to URL: ```http://127.0.0.1:8050/```
+   
+Select the symbol from the dropdown list to view metrics for that stock. 
+   
+### Screenshot
 
-**Remove the asset folder for Content based dash app which uses light theme**
-
+![Dash Sample](RDPDashboard.jpg)

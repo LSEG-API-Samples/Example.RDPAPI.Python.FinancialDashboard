@@ -14,7 +14,7 @@ import json
 dow30List = ['GS.N', 'NKE.N', 'CSCO.OQ', 'JPM.N', 'DIS.N', 'INTC.OQ', 'DOW.N', 'MRK.N', 'CVX.N', 'AXP.N', 'VZ.N', 'HD.N', 'WBA.OQ', 'XOM.N', 'MCD.N', 'UNH.N', 'KO.N', 'JNJ.N', 'MSFT.OQ', 'PG.N', 'IBM.N', 'PFE.N', 'MMM.N', 'AAPL.OQ', 'WMT.N', 'UTX.N', 'CAT.N', 'V.N', 'TRV.N', 'BA.N']
 rtFields = ['DSPLY_NAME', 'TRDPRC_1', 'NETCHNG_1', 'HIGH_1', 'LOW_1', 'OPEN_PRC', 'HST_CLOSE', 'BID', 'ASK', 'ACVOL_1', 'EARNINGS', 'YIELD', 'PERATIO']
 newsColumns = ['text', 'versionCreated']
-fiColumns = ['Instrument', 'Net sales', 'Gross Profit Margin - %', 'Operating Margin - %', 'EBITDA', 'EPS', 'ROA', 'ROE']
+esgColumns = ['Instrument', 'ESG Score', 'Environment Pillar Score', 'Social Pillar Score', 'Governance Pillar Score', 'Resource Use Score', 'Emissions Score', 'Innovation Score', 'Workforce Score', 'ESG Period Last Update Date']
 
 app = dash.Dash('EDP Dashboard')
 app.layout = html.Div([
@@ -38,9 +38,9 @@ app.layout = html.Div([
 		columns = [{'name': i, 'id': i} for i in rtFields]
 	),
 	
-	html.H4('Financial Ratios'),
-	dte.DataTable(id='finRatios',
-		columns=[{"name": a, "id": a} for a in fiColumns] 
+	html.H4('Environmental Social Governance'),
+	dte.DataTable(id='esg',
+		columns=[{"name": a, "id": a} for a in esgColumns] 
 	),
 
 	html.H4('News'),
@@ -59,7 +59,7 @@ app.layout = html.Div([
 
 
 
-@app.callback([Output('news', 'data'), Output('my-graph', 'figure'), Output('finRatios', 'data'), Output("spinner-output-1", "children")], [Input('my-dropdown', 'value')])
+@app.callback([Output('news', 'data'), Output('my-graph', 'figure'), Output('esg', 'data'), Output("spinner-output-1", "children")], [Input('my-dropdown', 'value')])
 def update_view(selected_dropdown_value):
 	headlines = rdp.get_news_headlines(query = "L:EN and " + selected_dropdown_value, count = 10)
 	
@@ -92,15 +92,15 @@ def update_view(selected_dropdown_value):
 		'layout': {'margin': {'l': 40, 'r': 0, 't': 20, 'b': 30}}
 	}
 
-	frResponse = fDataEndpoint.send_request(query_parameters = {"universe": selected_dropdown_value})
-	if frResponse.is_success:
-		fd = frResponse.json()
+	esgResponse = esgDataEndpoint.send_request(query_parameters = {"universe": selected_dropdown_value})
+	if esgResponse.is_success:
+		fd = esgResponse.data.raw
 		headers = [h['title'] for h in fd['headers']]
-		fin_result = [dict(zip(headers, fd['data'][0]))]
+		esg_result = [dict(zip(headers, fd['data'][0]))]
 	else:
-		fin_result = []
+		esg_result = []
 	
-	return headlines.to_dict('records'), ts_result, fin_result, None
+	return headlines.to_dict('records'), ts_result, esg_result, None
 
 
 
@@ -127,7 +127,7 @@ def startStreaming(selected_dropdown_value):
 	global strm
 	if strm is not None and strm.state == rdp.StreamState.Open:
 		strm.close()
-	strm = rdp.StreamingPrice(session = rdp.get_default_session(),
+	strm = rdp.StreamingPrices(session = rdp.get_default_session(),
 		universe = [selected_dropdown_value], 
 		fields = rtFields,
 	)
@@ -138,7 +138,7 @@ def startStreaming(selected_dropdown_value):
 def update_realTimeData(n):
 	global strm
 	if strm is not None and strm.state == rdp.StreamState.Open:
-		df = strm.get_snapshot()
+		df = strm.get_snapshot_data()
 		return df.to_dict('records')
 	else:
 		return []
@@ -149,7 +149,8 @@ strm = None
 config = cp.ConfigParser()
 config.read("config.cfg")
 rdp.open_platform_session(config['session']['app_key'], rdp.GrantPassword(username = config['session']['user'], password = config['session']['password']))
-fDataEndpoint = rdp.Endpoint(rdp.get_default_session(), "data/company-fundamentals/beta1/views/financial-summary-brief")
+#rdp.open_desktop_session(config['session']['app_key'])
+esgDataEndpoint = rdp.Endpoint(rdp.get_default_session(), "data/environmental-social-governance/v1/views/scores-standard")
 
 # run the dash app
 app.run_server(debug=True)
