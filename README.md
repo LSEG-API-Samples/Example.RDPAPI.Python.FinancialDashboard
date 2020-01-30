@@ -3,7 +3,7 @@ This is a quick example use case of building a financial dashboard type applicat
 
 ### Prerequisites
 * Install Dash framework for Python
-* Install RDP library for Python - current supported version: **refinitiv_dataplatform-0.2.35**
+* Install RDP library for Python
 * Credentials to retrieve snapshot and streaming data from Elektron Data Platform.
    * Machine ID
    * Password
