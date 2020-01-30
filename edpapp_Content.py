@@ -138,7 +138,7 @@ def startStreaming(selected_dropdown_value):
 def update_realTimeData(n):
 	global strm
 	if strm is not None and strm.state == rdp.StreamState.Open:
-		df = strm.get_snapshot_data()
+		df = strm.get_snapshot()
 		return df.to_dict('records')
 	else:
 		return []
@@ -153,4 +153,4 @@ rdp.open_platform_session(config['session']['app_key'], rdp.GrantPassword(userna
 esgDataEndpoint = rdp.Endpoint(rdp.get_default_session(), "data/environmental-social-governance/v1/views/scores-standard")
 
 # run the dash app
-app.run_server(debug=True)
+app.run_server() # debug=True)
